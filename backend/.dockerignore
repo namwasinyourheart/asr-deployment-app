@@ -164,3 +164,7 @@ cython_debug/
 scripts/
 tests/
 dir_structure.txt
+*postprocess_old.py
+*postprocess_ner.py
+*postprocess_number_fixing.py
+

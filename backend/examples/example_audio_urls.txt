@@ -1,0 +1,3 @@
+https://drive.google.com/uc?export=download&id=1CcyHCXoS5m9ILgBsWY-RZY52JNaZjjge
+
+https://raw.githubusercontent.com/namwasinyourheart/asr-demo-app/main/backend/examples/example_vietbud500_02.wav

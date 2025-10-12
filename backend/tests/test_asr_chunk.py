@@ -27,7 +27,8 @@ import io
 import time
 
 ws = websocket.WebSocket()
-ws.connect("ws://localhost:8000/api/v1/asr/chunk")
+# ws.connect("wss://ai.vnpost.vn/asr/api/v1/asr/stream")
+ws.connect("ws://127.0.0.1:13081/api/v1/asr/stream")
 
 # Load WAV
 # audio_path = "/home/nampv1/projects/asr/asr-deployment-app/backend/examples/example_vietbud500_03_26s.wav"

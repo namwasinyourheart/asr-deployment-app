@@ -77,7 +77,7 @@ def _load_whisper_model():
         from transformers import WhisperForConditionalGeneration, WhisperProcessor
         from peft import PeftModel
 
-        model_name = settings.HF_MODEL  # ví dụ: "openai/whisper-small"
+        model_name = settings.WHISPER_MODEL  # ví dụ: "openai/whisper-small"
         logger.info("Loading Whisper model: %s", model_name)
 
         processor = WhisperProcessor.from_pretrained(model_name)
@@ -163,7 +163,7 @@ def asr_infer(audio_path: str) -> dict:
 
         logger.info("Transcription: %s", text)
         logger.info("Duration: %s seconds", duration)
-        logger.info("Processing time: %s seconds", processing_time)
+        logger.info("Time for ASR: %s seconds", processing_time)
 
         return {
             "text": text,
