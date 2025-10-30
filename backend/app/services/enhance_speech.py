@@ -26,9 +26,15 @@ def enhance_speech(
 
     # === Enhance ===
     with torch.no_grad():
+        # Ensure audio is on CPU before enhancement
+        if noisy_audio.is_cuda:
+            noisy_audio = noisy_audio.cpu()
         enhanced_audio = enhance(model, df_state, noisy_audio)
 
     # === Save ===
+    # Move to CPU if needed before saving
+    if enhanced_audio.is_cuda:
+        enhanced_audio = enhanced_audio.cpu()
     target_sr = df_state.sr() if callable(df_state.sr) else df_state.sr
     save_audio(output_wav, enhanced_audio, target_sr)
     print(f"✅ Enhanced audio saved to: {output_wav}")

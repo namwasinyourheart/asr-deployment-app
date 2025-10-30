@@ -516,3 +516,10 @@ def normalize_detected_entities(text, detected_entities):
     out_parts.append(txt[last:])
     return "".join(out_parts)
 
+def postprocess_number(asr_text: str) -> str:
+    """
+    Nhận input là ASR text (Vietnamese) và trả về text đã được chuẩn hóa
+    các số, bao gồm: phone/account, number_sequence, currency, percentage, fraction, ordinal, decimal, date, time, year_duration.
+    """
+    enriched, normalized_sentence = process_sentence(asr_text.strip())
+    return normalized_sentence

@@ -79,6 +79,12 @@ def replace_words_with_dash(text: str, keywords: List[str] = None) -> str:
     return pattern.sub(repl, text)
 
 
+def postprocess_address(text: str) -> str:
+    text = replace_words_with_dash(text.strip())
+    text = replace_words_with_slash(text.strip())
+    return text
+
+
 
 if __name__ == "__main__":
     # --- Quick test ---
