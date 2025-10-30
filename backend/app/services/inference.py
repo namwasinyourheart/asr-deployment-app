@@ -1,4 +1,3 @@
-import logging
 import time
 import os
 import sys
@@ -7,11 +6,9 @@ import torch
 
 from app.core.config import settings
 from faster_whisper import WhisperModel
-from .enhance_speech import enhance_speech
-from .postprocess_text import postprocess_text, load_sec_dict
+from .enhance_speech import enhance_speech, _df_model, _df_state
+from .postprocess_text import postprocess_text, _sec_dict, _cpr_model
 from .audio_utils import load_audio, compute_duration
-
-from df.enhance import init_df
 
 from .service_utils import setup_logger
 
@@ -31,13 +28,7 @@ MODEL_BACKEND = settings.MODEL_BACKEND
 _vad_utils = None
 _vad_model = None
 
-_df_model = None
-_df_state = None
 
-# _cpr_model = None
-# _sec_dict = None
-
-from .postprocess_text import _sec_dict, _cpr_model
 
 def _ensure_vad_model():
     global _vad_model, _vad_utils
@@ -49,31 +40,6 @@ def _ensure_vad_model():
             source="local",
             force_reload=False
         )
-
-
-def _ensure_df_model():
-    global _df_model, _df_state
-    if _df_model is None or _df_state is None:
-        logger.info("Loading DeepFilterNet2 speech enhancement model...")
-        _df_model, _df_state, _ = init_df(
-            model_base_dir=settings.DEEP_FILTER_MODEL_PATH
-        )
-
-
-# def _load_cpr_model():
-#     logger.info("Loading CPR model...")
-#     from gec_model import GecBERTModel
-#     model = GecBERTModel(
-#         vocab_path=CPR_VOCAB_PATH,
-#         model_paths=CPR_MODEL_PATH,
-#         split_chunk=True
-#     )
-#     return model
-
-# def _ensure_cpr_model():
-#     global _cpr_model
-#     if _cpr_model is None:  
-#         _cpr_model = _load_cpr_model()
 
 def _load_faster_whisper_model():
     """
@@ -106,8 +72,6 @@ def _load_transformers_whisper_model():
         logger.info("Loading HF Whisper model: %s", model_name)
 
         processor = WhisperProcessor.from_pretrained(model_name)
-        # processor.feature_extractor.chunk_length=120
-        # print("processor.feature_extractor.chunk_length:", processor.feature_extractor.chunk_length)
         model = WhisperForConditionalGeneration.from_pretrained(model_name, load_in_8bit=settings.LOAD_IN_8BIT)
 
         # Nếu có adapter_path trong config thì merge adapter LoRA
@@ -133,9 +97,6 @@ def _load_transformers_whisper_model():
             else:
                 model = model.to("cpu")
 
-
-        # print("processor:", processor)
-
         return model, processor
     except Exception as e:
         logger.exception("Failed to load Whisper model: %s", e)
@@ -154,18 +115,6 @@ def _ensure_whisper_model():
         
     elif MODEL_BACKEND == "transformers":
         _model, _processor = _load_transformers_whisper_model()
-
-        # print("_processor:", _processor == None)
-
-
-# def _ensure_sec_model():
-
-#     global _sec_dict
-
-#     if _sec_dict is None:
-#         logger.info("Loading SEC model...")
-#         sec_dict_path = os.path.join(settings.SEC_MODEL_PATH, "sec_dict.txt")
-#         _sec_dict = load_sec_dict(sec_dict_path)
 
 def get_transcript(
     model, 
@@ -186,14 +135,9 @@ def get_transcript(
 
         inputs = processor(audio_array, sampling_rate=sr, return_tensors="pt")
 
-        # print("I am here...")
-
         input_features = inputs.input_features
 
-        # device = "cuda" if settings.DEVICE == "cuda" and torch.cuda.is_available() else "cpu"
         input_features = input_features.to(model.device, dtype=model.dtype)
-
-        # print("here")
 
         with torch.no_grad():
             predicted_ids = model.generate(input_features, return_timestamps=True)
@@ -244,10 +188,7 @@ def asr_infer(
     Duration is in seconds or milliseconds depending on the flag.
     """
     _ensure_vad_model()
-    _ensure_df_model()
     _ensure_whisper_model()
-    # _ensure_cpr_model()
-    # _ensure_sec_model()
 
     print("MODEL_BACKEND:", MODEL_BACKEND)
     if MODEL_BACKEND:

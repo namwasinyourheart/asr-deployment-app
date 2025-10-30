@@ -1,5 +1,25 @@
 import torch
 from df.enhance import enhance, load_audio, save_audio
+from df.enhance import init_df
+
+from app.core.config import settings
+from .service_utils import setup_logger
+
+logger = setup_logger(__name__)
+
+_df_model = None
+_df_state = None
+
+def _ensure_df_model():
+    global _df_model, _df_state
+    if _df_model is None or _df_state is None:
+        logger.info("Loading DeepFilterNet2 speech enhancement model...")
+        _df_model, _df_state, _ = init_df(
+            model_base_dir=settings.DEEP_FILTER_MODEL_PATH
+        )
+
+_ensure_df_model()
+
 
 def enhance_speech(
     model,
