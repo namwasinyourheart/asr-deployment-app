@@ -89,7 +89,7 @@ def _load_transformers_whisper_model():
                     model = model.merge_and_unload()
             except Exception as e:
                 logger.exception("Failed to merge LoRA adapter: %s", e)
-        print("settings.LOAD_IN_8BIT:", settings.LOAD_IN_8BIT)
+        # print("settings.LOAD_IN_8BIT:", settings.LOAD_IN_8BIT)
 
         if not settings.LOAD_IN_8BIT:
             if settings.DEVICE == "cuda" and torch.cuda.is_available():
@@ -190,7 +190,7 @@ def asr_infer(
     _ensure_vad_model()
     _ensure_whisper_model()
 
-    print("MODEL_BACKEND:", MODEL_BACKEND)
+    # print("MODEL_BACKEND:", MODEL_BACKEND)
     if MODEL_BACKEND:
         logger.info("Running faster-whisper inference on %s", audio_path)
 
@@ -248,8 +248,6 @@ def asr_infer(
 
         # Transcribe
         asr_start = time.time()
-
-        # print("_processor:", _processor)
 
         text = get_transcript(_model, _processor, audio_path, model_backend=MODEL_BACKEND, beam_size=5, language="vi")
 

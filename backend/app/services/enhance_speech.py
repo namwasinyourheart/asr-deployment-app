@@ -52,7 +52,7 @@ def enhance_speech(
         enhanced_audio = enhance(model, df_state, noisy_audio)
 
     # === Save ===
-    # Move to CPU if needed before saving
+    # Move tensor to CPU before saving if it's on CUDA
     if enhanced_audio.is_cuda:
         enhanced_audio = enhanced_audio.cpu()
     target_sr = df_state.sr() if callable(df_state.sr) else df_state.sr

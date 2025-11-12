@@ -7,6 +7,7 @@ from text_postprocessing.number import postprocess_number
 from text_postprocessing.address import postprocess_address
 from text_postprocessing.cpr import postprocess_cpr
 from text_postprocessing.sec import postprocess_sec_simple as postprocess_sec
+from text_postprocessing.postprocess_vietnamese_tone import normalize_vietnamese_tone
 
 from app.core.config import settings
 from .service_utils import setup_logger
@@ -85,6 +86,9 @@ def postprocess_text(
 
     text = postprocess_sec(text, sec_dict)
     logger.info("Spelling Error Correction: %s", text)
+
+    text = normalize_vietnamese_tone(text)
+    logger.info("Tone Normalization: %s", text)
 
     text = postprocess_cpr(text, cpr_model)
     logger.info("Capitalization and Punctuation Restoration: %s", text)
