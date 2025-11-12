@@ -8,10 +8,11 @@ import soundfile as sf
 import io
 import numpy as np
 
-API_FILE_ENDPOINT = "http://127.0.0.1:13081/api/v1/asr/file"
-API_FILE_ENDPOINT = "http://127.0.0.1:13081/api/v1/asr_ct2/file"
-API_URL_ENDPOINT = "https://ai.vnpost.vn/asr/api/v1/asr/url"
-WS_ENDPOINT = "ws://ai.vnpost.vn/asr/api/v1/asr/stream"
+# API_FILE_ENDPOINT = "http://127.0.0.1:13081/api/v1/asr/file"
+# API_FILE_ENDPOINT = "http://127.0.0.1:13081/api/v1/asr_ct2/file"
+API_FILE_ENDPOINT = "https://ai.vnpost.vn/voiceai/asr/asr/v1/file"
+API_URL_ENDPOINT = "https://ai.vnpost.vn/voiceai/asr/asr/v1/url"
+WS_ENDPOINT = "ws://ai.vnpost.vn/voiceai/asr/asr/v1/stream"
 
 
 async def transcribe_async(audio_source: str, audio_file_or_url: str):

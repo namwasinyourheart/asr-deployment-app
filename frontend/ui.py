@@ -36,7 +36,7 @@ def build_ui():
             "URL":        {"source_data": None, "local_path": None}
         })
 
-        gr.Markdown("# 🎤 ASR Application")
+        gr.Markdown("# 🎤 VnPost Speech-to-Text")
         with gr.Row():
             with gr.Column():
                 gr.Markdown("## Get Audio")
@@ -62,16 +62,16 @@ def build_ui():
                 output_error = gr.Textbox(label="Error", visible=False, interactive=False, container=False)
 
 
-                gr.Markdown("## Suggesting Corrections")
-                with gr.Accordion("Your Corrections", open=True):
-                    user_name_input = gr.Textbox(label="Your Name")
-                    corrections_input = gr.Textbox(
-                        label="Corrections (one per line)",
-                        placeholder="Example:\nhelo -> hello\nthsi -> this",
-                        lines=5
-                    )
-                    save_button = gr.Button("Save Corrections")
-                    save_status = gr.Markdown("")
+                # gr.Markdown("## Suggesting Corrections")
+                # with gr.Accordion("Your Corrections", open=True):
+                #     user_name_input = gr.Textbox(label="Your Name")
+                #     corrections_input = gr.Textbox(
+                #         label="Corrections (one per line)",
+                #         placeholder="Example:\nhelo -> hello\nthsi -> this",
+                #         lines=5
+                #     )
+                #     save_button = gr.Button("Save Corrections")
+                    # save_status = gr.Markdown("")
 
 
         # --- UI logic ---
@@ -135,10 +135,10 @@ def build_ui():
             outputs=[output_transcript, output_duration, output_processing_time, output_error, output_error]
         )
 
-        save_button.click(
-            fn=save_corrections,
-            inputs=[user_name_input, corrections_input],
-            outputs=[save_status]
-        )
+        # save_button.click(
+        #     fn=save_corrections,
+        #     inputs=[user_name_input, corrections_input],
+        #     outputs=[save_status]
+        # )
 
     return demo
