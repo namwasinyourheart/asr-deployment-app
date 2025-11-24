@@ -224,6 +224,7 @@ def asr_infer(
                 "text_postprocessing_time": None,
             }
 
+        do_enhance_speech = False
 
         # Speech Enhancement
         if do_enhance_speech:
