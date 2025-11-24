@@ -192,7 +192,11 @@ def asr_infer(
 
     # print("MODEL_BACKEND:", MODEL_BACKEND)
     if MODEL_BACKEND:
-        logger.info("Running faster-whisper inference on %s", audio_path)
+        logger.info(
+            "Running inference on %s with backend %s",
+            audio_path,
+            MODEL_BACKEND
+        )
 
         total_processing_start = time.time()
 
