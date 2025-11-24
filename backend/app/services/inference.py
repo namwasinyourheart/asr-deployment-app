@@ -74,6 +74,9 @@ def _load_transformers_whisper_model():
         processor = WhisperProcessor.from_pretrained(model_name)
         model = WhisperForConditionalGeneration.from_pretrained(model_name, load_in_8bit=settings.LOAD_IN_8BIT)
 
+        model.generation_config.language = "vi"
+        model.generation_config.task = "transcribe"
+
         # Nếu có adapter_path trong config thì merge adapter LoRA
         adapter_paths = settings.ADAPTER_PATHS
         adapter_paths = [p.strip() for p in adapter_paths.split(",") if p.strip()]
