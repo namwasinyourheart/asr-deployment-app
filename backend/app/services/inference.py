@@ -181,7 +181,7 @@ def has_speech(audio_array, sr, min_speech_duration_ms=250):
 
 def asr_infer(
     audio_path: str,
-    do_enhance_speech: bool = True,
+    do_enhance_speech: bool = False,
     do_postprocess_text: bool = True,
     milliseconds: bool = True
 ) -> dict:
