@@ -78,7 +78,7 @@ async def transcribe_audio_file(
             except Exception as e:
                 logger.warning(f"Failed to delete temp file {tmp_path}: {e}")
 
-@router.post("/transcribe", response_model=ASRResponse)
+@router.post("/", response_model=ASRResponse)
 async def transcribe_audio_file(
     audio_file: UploadFile = File(...),
     enhance_speech: bool = Form(True),
