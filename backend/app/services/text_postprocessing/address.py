@@ -22,10 +22,12 @@ def replace_words_with_slash(text: str, keywords: List[str] = None) -> str:
     if keywords is None:
         keywords = [
             "trên", 
+            "chên",
             "gạch chéo", 
             "sẹc", 
             "sạch", 
             "xuyệt", 
+            "xoẹt",
             "sạc",
             "xẹt",
             "sẹt",
