@@ -8,19 +8,33 @@ def download_audio_from_url(url: str):
     try:
         output_path = tempfile.mktemp(suffix=".wav")
         with httpx.Client(follow_redirects=True, timeout=60) as client:
+            # Initial request to get the content
             r = client.get(url)
-            if "drive.google.com" in r.url.host and "export=download" in r.url.query:
-                m = re.search(r"confirm=([0-9A-Za-z_]+)", r.text)
+            
+            # Handle Google Drive download links
+            if "drive.google.com" in str(r.url) and "export=download" in str(r.url):
+                m = re.search(r"confirm=([0-9A-Za-z_\-]+)", str(r.url))
+                if not m:
+                    m = re.search(r"confirm=([0-9A-Za-z_\-]+)", r.text)
                 if m:
                     token = m.group(1)
-                    download_url = url + "&confirm=" + token
+                    download_url = f"{url}&confirm={token}"
                     r = client.get(download_url)
+            
             r.raise_for_status()
+            
+            # Save the content to a temporary file
             with open(output_path, "wb") as f:
                 f.write(r.content)
-        return output_path, None
+                
+            return output_path, None
+            
+    except httpx.HTTPStatusError as e:
+        return None, f"Lỗi HTTP {e.response.status_code} khi tải file: {str(e)}"
+    except httpx.RequestError as e:
+        return None, f"Lỗi kết nối khi tải file: {str(e)}"
     except Exception as e:
-        return None, f"Failed to download audio: {e}"
+        return None, f"Lỗi khi tải file âm thanh: {str(e)}"
 
 
 

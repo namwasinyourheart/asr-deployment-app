@@ -93,3 +93,12 @@ def postprocess_text(
     text = postprocess_cpr(text, cpr_model)
     logger.info("Capitalization and Punctuation Restoration: %s", text)
     return {"text": text}
+
+
+def cpr(
+    text: str,
+    cpr_model=_cpr_model
+) -> str:
+    text = postprocess_cpr(text, cpr_model)
+
+    return {"text": text}

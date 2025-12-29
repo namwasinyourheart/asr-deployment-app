@@ -13,7 +13,7 @@
 import logging
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, WebSocket, WebSocketDisconnect
 from app.services.inference import asr_infer as asr_infer
-from app.services.postprocess_text import postprocess_text
+from app.services.postprocess_text import postprocess_text, cpr
 
 from app.schemas.asr import ASRResponse, ASRRequest
 import tempfile
@@ -136,6 +136,13 @@ async def postprocess_text_endpoint(text: str = Form(...)):
     from app.services.postprocess_text import postprocess_text
     processed_text = postprocess_text(text)["text"]
     return {"text": processed_text}
+
+@router.post("/cpr", response_model=ASRResponse)
+async def cpr_endpoint(text: str = Form(...)):
+    """Truyền text để postprocess"""
+    from app.services.postprocess_text import cpr
+    cpr_text = cpr(text)["text"]
+    return {"text": cpr_text}
 
 
 

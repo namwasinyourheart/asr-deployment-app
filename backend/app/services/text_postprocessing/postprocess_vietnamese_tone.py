@@ -204,7 +204,7 @@ def normalize_vietnamese_tone(sentence):
         :param sentence:
         :return:
         """
-    sentence = sentence.lower()
+    # sentence = sentence.lower()
     words = sentence.split()
     for index, word in enumerate(words):
         words[index] = chuan_hoa_dau_tu_tieng_viet(word)
@@ -221,7 +221,10 @@ if __name__ == '__main__':
     #     output = decodetounicode(content)
     #     wirtefile('C:/Users/htv/Desktop/unicode.txt', output)
     # txt = 'nếu ngày mai trời nắng'
-    txt = "xã khánh tiến huyện u minh tỉnh cà mau"
+    # txt = "xã khánh tiến huyện u minh tỉnh cà mau"
+    txt = "hòa Hoà"
+    txt = "Xóm Hoà Qùy"
+    txt = "quỳ quỳ qùy hòa Hoà"
     # print(is_valid_vietnam_word(txt))
     txt = normalize_vietnamese_tone(txt)
     print(txt)

@@ -8,5 +8,5 @@ def postprocess_cpr(text: str, cpr_model) -> str:
 
     if isinstance(text, list):
         text = text[0]
-    
+    text = text.replace(":", "")
     return text
