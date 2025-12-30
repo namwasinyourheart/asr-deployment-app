@@ -4,21 +4,9 @@ from pydantic import validator
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    # Model configurations
-    MODEL_CONFIGS: Dict[str, Union[str, Tuple[str, str]]] = {
-        # Format: "model_name": "path_to_merged_model" or ("base_model", "adapter_path")
-        "openai/whisper-large-v3-turbo": "openai/whisper-large-v3-turbo",
-        "vnp/stt_a1": "/media/nampv1/hdd/models/asr/models/merged/vnpost_asr_01_20250920",
-        "vnp/stt_a2": (
-            "openai/whisper-large-v3-turbo",
-            "/media/nampv1/hdd/models/asr/models/adapters/train_venterprise_address_hanoi_2__openai_whisper_large_v3_turbo__bs48/venterprise_address_hanoi__openai_whisper_large_v3_turbo__ft_prepared_data_1_lora_r32_a64_bs48_lr1e-5__checkpoints__checkpoint-2200/checkpoint-2200"
-        )
-    }
-    
-    # Default model to use if none specified
-    DEFAULT_MODEL: str = "vnp/stt_a1"
     
     # Backward compatibility with existing environment variables
+    MODELS_DIR: str = os.getenv("MODELS_DIR", "/media/nampv1/hdd/models/asr")
     WHISPER_HF_MODEL_PATH: str = os.getenv("WHISPER_HF_MODEL_PATH", "openai/whisper-large-v3-turbo")
     ADAPTER_PATHS: Union[str, list[str], None] = os.getenv("ADAPTER_PATHS", None)  # optional Lora adapter path
     WHISPER_CT2_MODEL_PATH: str = os.getenv("WHISPER_CT2_MODEL_PATH", "")
@@ -31,6 +19,21 @@ class Settings(BaseSettings):
     TEMP_DIR: str = os.getenv("TEMP_DIR", "/tmp/asr")
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     LOAD_IN_8BIT: bool = os.getenv("LOAD_IN_8BIT", "False").lower() == "true"
+
+    # Model configurations
+    MODEL_CONFIGS: Dict[str, Union[str, Tuple[str, str]]] = {
+        # Format: "model_name": "path_to_merged_model" or ("base_model", "adapter_path")
+        "openai/whisper-large-v3-turbo": "openai/whisper-large-v3-turbo",
+        "vnp/stt_a1": os.path.join(MODELS_DIR, "merged/vnpost_asr_01_20250920"),
+        "vnp/stt_a2": (
+            "openai/whisper-large-v3-turbo",
+            os.path.join(MODELS_DIR, "adapters/vnp__stt_a2/checkpoint-2200")
+        )
+    }
+
+    # Default model to use if none specified
+    DEFAULT_MODEL: str = "vnp/stt_a1"
+
     
     @validator('MODEL_CONFIGS')
     def validate_model_configs(cls, v):
