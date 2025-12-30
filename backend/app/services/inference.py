@@ -116,8 +116,8 @@ def _load_transformers_whisper_model(model_name: Optional[str] = None):
             adapter_path = None
         
         logger.info(f"Loading HF Whisper model: {base_model}")
-        if adapter_path:
-            logger.info(f"With adapter from: {adapter_path}")
+        # if adapter_path:
+        #     logger.info(f"With adapter from: {adapter_path}")
 
         # Load base model and processor
         processor = WhisperProcessor.from_pretrained(base_model)
@@ -133,6 +133,7 @@ def _load_transformers_whisper_model(model_name: Optional[str] = None):
 
         # Load and merge adapter if specified
         if adapter_path and os.path.exists(adapter_path):
+            logger.info(f"With adapter from: {adapter_path}")
             try:
                 # Check if adapter config exists
                 config_path = os.path.join(adapter_path, "adapter_config.json")
