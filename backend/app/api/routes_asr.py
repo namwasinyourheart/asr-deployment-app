@@ -12,6 +12,7 @@
 
 import logging
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, WebSocket, WebSocketDisconnect
+from app.core.config import settings
 from app.services.inference import asr_infer as asr_infer
 from app.services.postprocess_text import postprocess_text, cpr
 
@@ -77,6 +78,80 @@ async def transcribe_audio_file(
                 logger.info(f"Deleted temp file: {tmp_path}")
             except Exception as e:
                 logger.warning(f"Failed to delete temp file {tmp_path}: {e}")
+
+@router.post("/transcript", response_model=ASRResponse)
+async def transcribe_audio_with_model(
+    audio_file: UploadFile = File(...),
+    model_name: str = Form("vnp/stt_a1", description="Name of the model to use for transcription"),
+    enhance_speech: bool = Form(True),
+    postprocess_text: bool = Form(True),
+):
+    """
+    Transcribe audio file using the specified model.
+    
+    Args:
+        audio_file: Audio file to transcribe
+        model_name: Name of the model to use (e.g., 'openai/whisper-large-v3-turbo', 'vnp/stt_a1', 'vnp/stt_a2')
+        enhance_speech: Whether to apply speech enhancement
+        postprocess_text: Whether to apply text post-processing
+    """
+    # Validate file type
+    if not audio_file.filename.lower().endswith(ALLOWED_EXTENSIONS):
+        raise HTTPException(status_code=400, detail=f"Unsupported file type. Allowed: {ALLOWED_EXTENSIONS}")
+
+    # Create ASRRequest object
+    options = ASRRequest(
+        enhance_speech=enhance_speech,
+        postprocess_text=postprocess_text,
+    )
+
+    # Create temp file
+    suffix = os.path.splitext(audio_file.filename)[1]
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp_path = tmp.name
+
+    try:
+        # Write uploaded file to temp file
+        async with aiofiles.open(tmp_path, "wb") as out_file:
+            while chunk := await audio_file.read(1024 * 1024):
+                await out_file.write(chunk)
+
+        logger.info(f"Saved uploaded file to temp path: {tmp_path}, size: {os.path.getsize(tmp_path)} bytes, model: {model_name}")
+
+        # Run inference with specified model
+        try:
+            result = asr_infer(
+                tmp_path,
+                do_enhance_speech=options.enhance_speech,
+                do_postprocess_text=options.postprocess_text,
+                model_name=model_name,
+                milliseconds=True,
+            )
+        except ValueError as e:
+            if "not found in configurations" in str(e):
+                raise HTTPException(status_code=400, detail=str(e))
+            raise HTTPException(status_code=500, detail=f"ASR inference failed: {str(e)}")
+        except Exception as e:
+            logger.error(f"ASR inference failed: {e}")
+            raise HTTPException(status_code=500, detail=f"ASR inference failed: {str(e)}")
+
+        return result
+
+    finally:
+        if os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+                logger.info(f"Deleted temp file: {tmp_path}")
+            except Exception as e:
+                logger.warning(f"Failed to delete temp file {tmp_path}: {e}")
+
+@router.get("/available_models")
+async def get_available_models():
+    """Get list of available models."""
+    return {
+        "available_models": list(settings.MODEL_CONFIGS.keys()),
+        "default_model": settings.DEFAULT_MODEL
+    }
 
 @router.post("/transcribe", response_model=ASRResponse)
 async def transcribe_audio_file(
