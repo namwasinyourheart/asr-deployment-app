@@ -23,16 +23,20 @@ class Settings(BaseSettings):
     # Model configurations
     MODEL_CONFIGS: Dict[str, Union[str, Tuple[str, str]]] = {
         # Format: "model_name": "path_to_merged_model" or ("base_model", "adapter_path")
-        "openai/whisper-large-v3-turbo": "openai/whisper-large-v3-turbo",
+        # "openai/whisper-large-v3-turbo": "openai/whisper-large-v3-turbo",
         "vnp/stt_a1": os.path.join(MODELS_DIR, "merged/vnpost_asr_01_20250920"),
         "vnp/stt_a2": (
             "openai/whisper-large-v3-turbo",
             os.path.join(MODELS_DIR, "adapters/vnp__stt_a2/checkpoint-2200")
+        ),
+        "vnp/stt_a3": (
+            "openai/whisper-large-v3-turbo",
+            os.path.join(MODELS_DIR, "adapters/vnp__stt_a3/checkpoint-2400")
         )
     }
 
     # Default model to use if none specified
-    DEFAULT_MODEL: str = "vnp/stt_a1"
+    DEFAULT_MODEL: str = "vnp/stt_a3"
 
     
     @validator('MODEL_CONFIGS')
