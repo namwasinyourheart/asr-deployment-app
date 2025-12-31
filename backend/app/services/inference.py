@@ -95,7 +95,7 @@ def _load_faster_whisper_model(model_name: Optional[str] = None):
 
 def _load_transformers_whisper_model(model_name: Optional[str] = None):
     """
-    Load transformers Whisper model with optional LoRA adapter.
+    Load transformers Whisper model with optional LoRA adapters.
     
     Args:
         model_name: Name of the model to load. If None, uses default model.
@@ -108,16 +108,21 @@ def _load_transformers_whisper_model(model_name: Optional[str] = None):
         # Get model configuration
         model_config = settings.get_model_config(model_name)
         
-        # Handle both single model path and (base_model, adapter_path) tuple
-        if isinstance(model_config, tuple):
-            base_model, adapter_path = model_config
-        else:
+        # Handle different config types
+        if isinstance(model_config, str):
+            # Single model path
             base_model = model_config
-            adapter_path = None
+            adapter_paths = []
+        elif isinstance(model_config, tuple):
+            # Handle both single adapter and multiple adapters
+            base_model = model_config[0]
+            adapter_paths = list(model_config[1:])  # Convert to list for easier handling
+        else:
+            raise ValueError(f"Invalid model config type: {type(model_config)}")
         
         logger.info(f"Loading HF Whisper model: {base_model}")
-        # if adapter_path:
-        #     logger.info(f"With adapter from: {adapter_path}")
+        if adapter_paths:
+            logger.info(f"Will load {len(adapter_paths)} adapters")
 
         # Load base model and processor
         processor = WhisperProcessor.from_pretrained(base_model)
@@ -131,23 +136,27 @@ def _load_transformers_whisper_model(model_name: Optional[str] = None):
         model.generation_config.language = "vi"
         model.generation_config.task = "transcribe"
 
-        # Load and merge adapter if specified
-        if adapter_path and os.path.exists(adapter_path):
-            logger.info(f"With adapter from: {adapter_path}")
+        # Load and merge adapters if specified
+        for i, adapter_path in enumerate(adapter_paths, 1):
+            if not os.path.exists(adapter_path):
+                logger.warning(f"Adapter path does not exist: {adapter_path}")
+                continue
+                
             try:
                 # Check if adapter config exists
                 config_path = os.path.join(adapter_path, "adapter_config.json")
                 if not os.path.exists(config_path):
                     raise FileNotFoundError(f"Adapter config not found at {config_path}")
                 
-                logger.info(f"Loading adapter from {adapter_path}")
+                logger.info(f"Loading adapter {i}/{len(adapter_paths)} from {adapter_path}")
                 model = PeftModel.from_pretrained(model, adapter_path)
                 model = model.merge_and_unload()
-                logger.info("Successfully merged adapter")
+                logger.info(f"Successfully merged adapter {i}/{len(adapter_paths)}")
                 
             except Exception as e:
                 logger.error(f"Failed to load adapter from {adapter_path}: {str(e)}")
-                logger.info("Continuing with base model only...")
+                logger.info("Continuing with current model...")
+                continue
         
         # Skip moving model if using 8-bit quantization or if model is already on device
         if not settings.LOAD_IN_8BIT and not hasattr(model, 'hf_device_map'):

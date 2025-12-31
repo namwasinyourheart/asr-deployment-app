@@ -21,10 +21,15 @@ class Settings(BaseSettings):
     LOAD_IN_8BIT: bool = os.getenv("LOAD_IN_8BIT", "False").lower() == "true"
 
     # Model configurations
-    MODEL_CONFIGS: Dict[str, Union[str, Tuple[str, str]]] = {
+    MODEL_CONFIGS: Dict[str, Union[str, Tuple[Union[str, os.PathLike], ...]]] = {
         # Format: "model_name": "path_to_merged_model" or ("base_model", "adapter_path")
         # "openai/whisper-large-v3-turbo": "openai/whisper-large-v3-turbo",
-        "vnp/stt_a1": os.path.join(MODELS_DIR, "merged/vnpost_asr_01_20250920"),
+        # "vnp/stt_a1": os.path.join(MODELS_DIR, "merged/vnpost_asr_01_20250920"),
+        "vnp/stt_a1": (
+            "openai/whisper-large-v3-turbo",
+            os.path.join(MODELS_DIR, "adapters/on-data1/checkpoint-7434"),
+            os.path.join(MODELS_DIR, "adapters/on-data2/checkpoint-6500")
+        ),
         "vnp/stt_a2": (
             "openai/whisper-large-v3-turbo",
             os.path.join(MODELS_DIR, "adapters/vnp__stt_a2/checkpoint-2200")
@@ -47,15 +52,15 @@ class Settings(BaseSettings):
             if not isinstance(model_name, str):
                 raise ValueError(f"Model name must be a string, got {type(model_name)}")
             if not (isinstance(config, str) or 
-                   (isinstance(config, tuple) and len(config) == 2 and 
+                   (isinstance(config, tuple) and len(config) >= 2 and 
                     all(isinstance(x, str) for x in config))):
                 raise ValueError(
-                    f"Model config must be a path string or (base_model, adapter_path) tuple, "
+                    f"Model config must be a path string or (base_model, adapter_path1, ...) tuple, "
                     f"got {type(config)} for model {model_name}"
                 )
         return v
     
-    def get_model_config(self, model_name: Optional[str] = None) -> Union[str, Tuple[str, str]]:
+    def get_model_config(self, model_name: Optional[str] = None) -> Union[str, Tuple[Union[str, os.PathLike], ...]]:
         """
         Get configuration for the specified model or default model.
         
@@ -63,7 +68,7 @@ class Settings(BaseSettings):
             model_name: Name of the model to get configuration for. If None, uses default model.
             
         Returns:
-            Union[str, Tuple[str, str]]: Either a model path string or a tuple of (base_model, adapter_path)
+            Union[str, Tuple[Union[str, os.PathLike], ...]]: Either a model path string or a tuple of (base_model, adapter_path1, ...)
             
         Raises:
             ValueError: If the specified model is not found in configurations
@@ -84,9 +89,9 @@ class Settings(BaseSettings):
         config = self.get_model_config(model_name)
         return config[0] if isinstance(config, tuple) else config
     
-    def get_adapter_path(self, model_name: Optional[str] = None) -> Optional[str]:
-        """Get the adapter path if it exists, otherwise return None."""
+    def get_adapter_paths(self, model_name: Optional[str] = None) -> Optional[Tuple[str, ...]]:
+        """Get all adapter paths if they exist, otherwise return None."""
         config = self.get_model_config(model_name)
-        return config[1] if isinstance(config, tuple) else None
+        return config[1:] if isinstance(config, tuple) and len(config) > 1 else None
 
 settings = Settings()
