@@ -28,6 +28,27 @@ def load_vn_unigram_vocab(path):
             vocab.add(w)
 
     return vocab
+def load_vn_unigram_vocab(path):
+    """
+    Đọc file dictionary (utf-8)
+    và trả về set từ đơn.
+    """
+    with open(path, "r", encoding="utf-8") as f:
+        text = f.read()
+
+    vocab = set()
+
+    for line in text.splitlines():
+        line = line.strip().lower()
+        if not line:
+            continue
+
+        # Tách từ tiếng Việt (có dấu)
+        words = re.findall(r"[a-zA-ZÀ-ỹđĐ]+", line)
+        for w in words:
+            vocab.add(w)
+
+    return vocab
 
 
 vn_unigram_vocab = load_vn_unigram_vocab(settings.VN_UNIGRAM_VOCAB_PATH)
