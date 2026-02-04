@@ -161,24 +161,129 @@ def normalize_vietnamese_tone(sentence):
     return " ".join(norm_word(w) for w in words)
 
 
+VALID_CODA_BY_VOWEL = {
+    'a':  {'m','n','ng','nh','p','t','c','ch'},
+    'ă':  {'m','n','ng','nh','p','t','c','ch'},
+    'â':  {'m','n','ng','nh'},
+    'e':  {'m','n','ng','nh','p','t','c','ch'},
+    'ê':  {'m','n','ng','nh'},
+    'i':  {'m','n','ng','nh'},
+    'o':  {'m','n','ng','nh','p','t','c'},
+    'ô':  {'m','n','ng','nh'},
+    'ơ':  {'m','n','ng','nh'},
+    'u':  {'m','n','ng','nh','p','t','c'},
+    'ư':  {'m','n','ng','nh'},
+    'y':  {'m','n','ng','nh'}
+}
+
+
+PHU_AM_DAU = {
+    "b","c","ch","d","đ","g","gh","gi","h","k","kh","l","m","n",
+    "ng","ngh","nh","p","ph","qu","r","s","t","th","tr","v","x"
+}
+PHU_AM_CUOI = {"c","ch","m","n","ng","nh","p","t"}
+
+CONSONANTS = set("bcdfghjklmnpqrstvwxyzđ")
+VALID_CHARS = set(nguyen_am_to_ids.keys()) | CONSONANTS
+
+
+def is_vietnamese_word_chatgpt(word: str) -> bool:
+    if not word:
+        return False
+
+    w = word.lower()
+
+    # 1. ký tự hợp lệ
+    if any(ch not in VALID_CHARS for ch in w):
+        return False
+
+    vowel_pos = []
+    vowel_base = []
+    tone_count = 0
+    n = len(w)
+
+    # 2. nhận diện nguyên âm (xử lý qu / gi)
+    for i, ch in enumerate(w):
+        if ch not in nguyen_am_to_ids:
+            continue
+
+        if i > 0 and w[i-1] == 'q' and ch == 'u' and i+1 < n and w[i+1] in nguyen_am_to_ids:
+            continue
+        if i > 0 and w[i-1] == 'g' and ch == 'i' and i+1 < n and w[i+1] in nguyen_am_to_ids:
+            continue
+
+        base_idx, tone = nguyen_am_to_ids[ch]
+        vowel_pos.append(i)
+        vowel_base.append(base_idx)
+        if tone != 0:
+            tone_count += 1
+
+    if not vowel_pos or tone_count > 1:
+        return False
+
+    # 3. nguyên âm liền nhau
+    if any(vowel_pos[i+1] - vowel_pos[i] != 1 for i in range(len(vowel_pos)-1)):
+        return False
+
+    # 4. tối đa 3 nguyên âm
+    if len(vowel_pos) > 3:
+        return False
+
+    # 5. không cho aa, ee, oo...
+    if any(vowel_base[i] == vowel_base[i+1] for i in range(len(vowel_base)-1)):
+        return False
+
+    start, end = vowel_pos[0], vowel_pos[-1]
+    onset = w[:start]
+    coda = w[end+1:]
+
+    if onset and onset not in PHU_AM_DAU:
+        return False
+    if coda and coda not in PHU_AM_CUOI:
+        return False
+
+    # 6. kiểm tra tương thích vần (FIX mẫp)
+    last_vowel = w[end]
+    base_idx, _ = nguyen_am_to_ids[last_vowel]
+    base_vowel = bang_nguyen_am[base_idx][0]
+
+    if coda and coda not in VALID_CODA_BY_VOWEL.get(base_vowel, set()):
+        return False
+
+    return True
+
+
 
 # ==============================
 #  DEMO TEST
 # ==============================
 if __name__ == "__main__":
 
-    print(is_valid_vietnam_word("mẫp"))
-    tests = [
-        # "Quỳ qùy hòa Hoà",
-        # "Xóm Hoà Qùy",
-        # "hòa Hoà",
-        # "toi yeu tieng Viet",
-        # "giàu có", 
-        # "Quảng cáo GIÀU",
-        "Thôn Trung Hà, Xã Thái Hoà, Huyện Ba Vì, Thành phố Hà Nội",
-    ]
 
-    for t in tests:
-        print("input :", t)
-        print("output:", normalize_vietnamese_tone(t))
-        print("---")
+    valid = ["học", "người", "việt", "quốc", "thoại", "nhanh"]
+    invalid = ["mẫp", "hoàng", "zuaa", "haoiii", "hojcs", "nguoif", "aa"]
+    invalid = ["lẫp", "cấc"]
+
+    for w in valid:
+        print(w, is_vietnamese_word(w))
+
+    for w in invalid:
+        print(w, is_vietnamese_word(w))
+
+    word = "aaa"
+    print(is_valid_vietnam_word(word))
+    print(is_vietnamese_word(word))
+    # tests = [
+    #     # "Quỳ qùy hòa Hoà",
+    #     # "Xóm Hoà Qùy",
+    #     # "hòa Hoà",
+    #     # "toi yeu tieng Viet",
+    #     # "giàu có", 
+    #     # "Quảng cáo GIÀU",
+    #     "Thôn Trung Hà, Xã Thái Hoà, Huyện Ba Vì, Thành phố Hà Nội",
+    # ]
+
+    # for t in tests:
+    #     print("input :", t)
+    #     print("output:", normalize_vietnamese_tone(t))
+    #     print("---")

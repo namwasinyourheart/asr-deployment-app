@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     TEMP_DIR: str = os.getenv("TEMP_DIR", "/tmp/asr")
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     LOAD_IN_8BIT: bool = os.getenv("LOAD_IN_8BIT", "False").lower() == "true"
+    VN_UNIGRAM_VOCAB_PATH: str = os.getenv("VN_UNIGRAM_VOCAB_PATH", "")
 
     # Model configurations
     MODEL_CONFIGS: Dict[str, Union[str, Tuple[Union[str, os.PathLike], ...]]] = {

@@ -23,7 +23,7 @@ import os
 
 
 
-router = APIRouter()
+router = APIRouter(tags=["asr"])
 logger = logging.getLogger(__name__)
 
 ALLOWED_EXTENSIONS = (".wav", ".mp3", ".flac", ".m4a")
