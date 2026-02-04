@@ -1,33 +1,33 @@
 import re
-import chardet
+# import chardet
 from app.core.config import settings
 
-def load_vn_unigram_vocab(path):
-    """
-    Đọc file dictionary, xử lý mọi loại encoding
-    và trả về set từ đơn.
-    """
-    # Đọc nhị phân để dò encoding
-    with open(path, "rb") as f:
-        raw = f.read()
+# def load_vn_unigram_vocab(path):
+#     """
+#     Đọc file dictionary, xử lý mọi loại encoding
+#     và trả về set từ đơn.
+#     """
+#     # Đọc nhị phân để dò encoding
+#     with open(path, "rb") as f:
+#         raw = f.read()
 
-    detected = chardet.detect(raw)
-    enc = detected["encoding"] or "utf-8"
+#     detected = chardet.detect(raw)
+#     enc = detected["encoding"] or "utf-8"
 
-    text = raw.decode(enc, errors="replace")
-    vocab = set()
+#     text = raw.decode(enc, errors="replace")
+#     vocab = set()
 
-    for line in text.splitlines():
-        line = line.strip().lower()
-        if not line:
-            continue
+#     for line in text.splitlines():
+#         line = line.strip().lower()
+#         if not line:
+#             continue
 
-        # Tách từ tiếng Việt (có dấu)
-        words = re.findall(r"[a-zA-ZÀ-ỹđĐ]+", line)
-        for w in words:
-            vocab.add(w)
+#         # Tách từ tiếng Việt (có dấu)
+#         words = re.findall(r"[a-zA-ZÀ-ỹđĐ]+", line)
+#         for w in words:
+#             vocab.add(w)
 
-    return vocab
+#     return vocab
 def load_vn_unigram_vocab(path):
     """
     Đọc file dictionary (utf-8)
