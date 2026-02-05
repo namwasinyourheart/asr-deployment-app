@@ -16,7 +16,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(asr_router, prefix="/asr/v1")
-app.include_router(language_router, prefix="/apr/v1")
+app.include_router(language_router, prefix="/asr/v1")
 
 @app.get("/")
 async def hello():
