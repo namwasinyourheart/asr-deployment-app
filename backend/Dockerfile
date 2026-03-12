@@ -12,8 +12,8 @@ RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
 # COPY . .
-
-ENV WHISPER_MODEL_PATH="/app/models/merged/vnpost_asr_01_20250920"
+ENV MODELS_DIR="/app/models/"
+ENV WHISPER_HF_MODEL_PATH="/app/models/merged/vnpost_asr_01_20250920"
 ENV WHISPER_CT2_MODEL_PATH="/app/models/ct2/vnpost_asr_01_20250920_ct2_fp16"
 ENV ADAPTER_PATHS=""
 ENV DEVICE="cuda"
@@ -22,6 +22,7 @@ ENV VAD_MODEL_PATH="/app/models/vad/snakers4_silero-vad_master"
 ENV DEEP_FILTER_MODEL_PATH="/app/models/df/DeepFilterNet2"
 ENV SEC_MODEL_PATH="/app/models/sec/"
 ENV CPR_MODEL_PATH="/app/models/cpr/capu"
+ENV VN_UNIGRAM_VOCAB_PATH="/app/models/vn_unigram_vocab.txt"
 
 # ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/local/cuda/extras/CUPTI/lib64:$LD_LIBRARY_PATH
 
@@ -44,5 +45,16 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "13081"]
 # sudo docker run --env DEVICE=cpu -it --rm \
 # -v /home/nampv1/projects/asr/asr-demo-app/backend:/app \
 # -v /media/nampv1/hdd/models/asr/models:/app/models \
+# -p 13081:13081 vnpost-asr-service-1:ct2_fp16
+
+# # server
+# docker run -d --gpus '"device=0"' \
+# --env MODELS_DIR="/app/models" \
+# --env MODEL_BACKEND=transformers \
+# --env WHISPER_HF_MODEL_PATH="/app/models/merged/vnpost_asr_01_20250920" \
+# --env ADAPTER_PATHS="/app/models/adapters/on_data1/checkpoint-7434,/app/models/adapters/on_data2/checkpoint-6500" \
+# -it --rm \
+# -v /home/dmst_ai/nampv1/asr-deployment-app/backend:/app \
+# -v /home/dmst_ai/nampv1/models/asr:/app/models \
 # -p 13081:13081 vnpost-asr-service-1:ct2_fp16
 

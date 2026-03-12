@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes_asr import router as asr_router
 from app.api.routes_language import router as language_router
+from app.api.routes_asr_stream import router as asr_stream_router
 
 app = FastAPI(title="VnPost ASR API")
 
@@ -17,6 +18,7 @@ app.add_middleware(
 # Include routers
 app.include_router(asr_router, prefix="/asr/v1")
 app.include_router(language_router, prefix="/asr/v1")
+app.include_router(asr_stream_router, prefix="/asr/v1")
 
 @app.get("/")
 async def hello():

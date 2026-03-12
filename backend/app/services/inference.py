@@ -66,8 +66,8 @@ def _load_faster_whisper_model(model_name: Optional[str] = None):
             if settings.is_adapter_model(model_name):
                 # Handle adapter-based model
                 base_model = settings.get_base_model(model_name)
-                adapter_path = settings.get_adapter_path(model_name)
-                logger.info(f"Loading adapter-based model: {model_name} (base: {base_model}, adapter: {adapter_path})")
+                adapter_paths = settings.get_adapter_paths(model_name)
+                logger.info(f"Loading adapter-based model: {model_name} (base: {base_model}, adapter: {adapter_paths})")
                 model = WhisperModel(
                     base_model,
                     device=settings.DEVICE,
@@ -101,7 +101,7 @@ def _load_transformers_whisper_model(model_name: Optional[str] = None):
         model_name: Name of the model to load. If None, uses default model.
     """
     try:
-        from transformers import WhisperForConditionalGeneration, WhisperProcessor
+        from transformers import WhisperForConditionalGeneration, WhisperProcessor, BitsAndBytesConfig
         from peft import PeftModel, PeftConfig
         import os
 
@@ -124,11 +124,13 @@ def _load_transformers_whisper_model(model_name: Optional[str] = None):
         if adapter_paths:
             logger.info(f"Will load {len(adapter_paths)} adapters")
 
+        quantization_config = BitsAndBytesConfig(load_in_8bit=settings.LOAD_IN_8BIT)
+
         # Load base model and processor
         processor = WhisperProcessor.from_pretrained(base_model)
         model = WhisperForConditionalGeneration.from_pretrained(
             base_model,
-            load_in_8bit=settings.LOAD_IN_8BIT,
+            quantization_config=quantization_config,
             device_map="auto" if settings.DEVICE == "cuda" else None
         )
 
@@ -231,7 +233,91 @@ def get_transcript(
         logger.info("Transcript: %s", text)
 
     return text
-        
+
+
+from typing import Union
+import numpy as np
+import torch
+
+def get_transcript(
+    model,
+    processor,
+    audio_input: Union[str, np.ndarray],
+    sample_rate: int = 16000,
+    model_backend: str = "faster_whisper",
+    beam_size: int = 5,
+    language: str = "vi"
+):
+    logger.info("Getting transcript...")
+
+    # ----------------------------------------
+    # Faster Whisper
+    # ----------------------------------------
+
+    if model_backend == "faster_whisper":
+
+        if isinstance(audio_input, str):
+
+            segments, info = model.transcribe(
+                audio_input,
+                beam_size=beam_size,
+                language=language
+            )
+
+        else:
+
+            segments, info = model.transcribe(
+                audio_input,
+                beam_size=beam_size,
+                language=language
+            )
+
+        text = " ".join([seg.text for seg in segments]).strip()
+
+    # ----------------------------------------
+    # Transformers Whisper
+    # ----------------------------------------
+
+    elif model_backend == "transformers":
+
+        if isinstance(audio_input, str):
+
+            audio_array, sr = load_audio(audio_input)
+
+        else:
+
+            audio_array = audio_input
+            sr = sample_rate
+
+        inputs = processor(
+            audio_array,
+            sampling_rate=sr,
+            return_tensors="pt"
+        )
+
+        input_features = inputs.input_features
+        input_features = input_features.to(model.device, dtype=model.dtype)
+
+        with torch.no_grad():
+
+            predicted_ids = model.generate(
+                input_features,
+                return_timestamps=True
+            )
+
+        transcription = processor.batch_decode(
+            predicted_ids,
+            skip_special_tokens=True
+        )
+
+        text = transcription[0] if transcription else ""
+
+    else:
+        raise ValueError(f"Unsupported backend: {model_backend}")
+
+    logger.info("Transcript: %s", text)
+
+    return text
 
 
 def has_speech(audio_array, sr, min_speech_duration_ms=250):
@@ -412,3 +498,212 @@ def asr_infer(
         "asr_time": asr_time,
         "text_postprocessing_time": text_postprocessing_time,
     }
+
+
+import os
+import time
+import logging
+import numpy as np
+
+from typing import Optional, Union
+
+logger = logging.getLogger(__name__)
+
+
+def asr_infer(
+    audio_input: Union[str, np.ndarray],
+    sample_rate: int = 16000,
+    enhance_speech: bool = True,
+    should_postprocess: bool = True,
+    model_name: Optional[str] = None,
+    milliseconds: bool = True,
+    **kwargs
+) -> dict:
+    """
+    Run inference with faster-whisper.
+
+    audio_input:
+        - str: path to wav file
+        - np.ndarray: raw audio array
+
+    Return dict:
+        {
+            "text": ...,
+            "duration": ...,
+            "total_processing_time": ...
+        }
+    """
+
+    _ensure_vad_model()
+    _ensure_whisper_model(model_name)
+
+    logger.info(
+        "Running inference with backend %s and model %s",
+        settings.MODEL_BACKEND,
+        model_name or "default"
+    )
+
+    total_processing_start = time.time()
+
+    # -------------------------------------------------
+    # LOAD AUDIO
+    # -------------------------------------------------
+
+    if isinstance(audio_input, str):
+
+        audio_path = audio_input
+        audio_array, sr = load_audio(audio_path)
+
+    elif isinstance(audio_input, np.ndarray):
+
+        audio_array = audio_input
+        sr = sample_rate
+        audio_path = None
+
+    else:
+        raise ValueError("audio_input must be file path or numpy array")
+
+    duration = compute_duration(audio_array, sr, milliseconds=milliseconds)
+
+    # -------------------------------------------------
+    # VAD CHECK
+    # -------------------------------------------------
+
+    if not has_speech(audio_array, sr):
+
+        total_processing_time = time.time() - total_processing_start
+
+        if milliseconds:
+            total_processing_time = round(total_processing_time * 1000, 3)
+        else:
+            total_processing_time = round(total_processing_time, 3)
+
+        logger.info("No speech detected")
+
+        return {
+            "text": "",
+            "duration": duration,
+            "total_processing_time": total_processing_time,
+            "speech_enhancement_time": None,
+            "asr_time": None,
+            "text_postprocessing_time": None,
+        }
+
+    # -------------------------------------------------
+    # SPEECH ENHANCEMENT (OPTIONAL)
+    # -------------------------------------------------
+
+    speech_enhancement_time = None
+
+    if enhance_speech and audio_path is not None:
+
+        speech_enhancement_start = time.time()
+
+        enhanced_path = os.path.splitext(audio_path)[0] + "_enhanced.wav"
+
+        try:
+
+            enhance_speech(
+                model=_df_model,
+                df_state=_df_state,
+                input_wav=audio_path,
+                output_wav=enhanced_path,
+                device=settings.DEVICE,
+            )
+
+            audio_array, sr = load_audio(enhanced_path)
+
+        except Exception as e:
+            logger.exception("Speech enhancement failed: %s", e)
+
+        speech_enhancement_time = time.time() - speech_enhancement_start
+
+        if milliseconds:
+            speech_enhancement_time = round(speech_enhancement_time * 1000, 3)
+        else:
+            speech_enhancement_time = round(speech_enhancement_time, 3)
+
+        if os.path.exists(enhanced_path):
+            os.remove(enhanced_path)
+
+    # -------------------------------------------------
+    # ASR
+    # -------------------------------------------------
+
+    asr_start = time.time()
+
+    text = get_transcript(
+        _model,
+        _processor,
+        audio_array,
+        sample_rate=sr,
+        model_backend=settings.MODEL_BACKEND,
+        beam_size=1,
+        language="vi"
+    )
+
+    asr_time = time.time() - asr_start
+
+    if milliseconds:
+        asr_time = round(asr_time * 1000, 3)
+    else:
+        asr_time = round(asr_time, 3)
+
+    logger.info("Raw Transcript: %s", text)
+
+    # -------------------------------------------------
+    # POSTPROCESS TEXT
+    # -------------------------------------------------
+
+    text_postprocessing_time = None
+
+    if should_postprocess:
+
+        text_postprocessing_start = time.time()
+
+        postprocessed_result = postprocess_text(
+            text,
+            _sec_dict,
+            _cpr_model
+        )
+
+        text = postprocessed_result["text"]
+
+        text_postprocessing_time = time.time() - text_postprocessing_start
+
+        if milliseconds:
+            text_postprocessing_time = round(text_postprocessing_time * 1000, 3)
+        else:
+            text_postprocessing_time = round(text_postprocessing_time, 3)
+
+        logger.info("Postprocessed Transcript: %s", text)
+
+    # -------------------------------------------------
+    # TOTAL PROCESSING TIME
+    # -------------------------------------------------
+
+    total_processing_time = time.time() - total_processing_start
+
+    if milliseconds:
+        total_processing_time = round(total_processing_time * 1000, 3)
+    else:
+        total_processing_time = round(total_processing_time, 3)
+
+    logger.info(
+        "Transcript: %s | Duration: %s | ASR Time: %s | Postprocess: %s | Total: %s",
+        text,
+        duration,
+        asr_time,
+        text_postprocessing_time if text_postprocessing_time else "N/A",
+        total_processing_time
+    )
+
+    return {
+        "text": text,
+        "duration": duration,
+        "total_processing_time": total_processing_time,
+        "speech_enhancement_time": speech_enhancement_time,
+        "asr_time": asr_time,
+        "text_postprocessing_time": text_postprocessing_time,
+    }
+
