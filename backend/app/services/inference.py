@@ -349,7 +349,7 @@ def has_speech(audio_array, sr, min_speech_duration_ms=250):
 
 def asr_infer(
     audio_path: str,
-    enhance_speech: bool = True,
+    do_enhance_speech: bool = True,
     should_postprocess: bool = True,
     model_name: Optional[str] = None,
     milliseconds: bool = True,
@@ -515,7 +515,7 @@ logger = logging.getLogger(__name__)
 def asr_infer(
     audio_input: Union[str, np.ndarray],
     sample_rate: int = 16000,
-    enhance_speech: bool = True,
+    do_enhance_speech: bool = True,
     should_postprocess: bool = True,
     model_name: Optional[str] = None,
     milliseconds: bool = True,
@@ -595,9 +595,10 @@ def asr_infer(
     # SPEECH ENHANCEMENT (OPTIONAL)
     # -------------------------------------------------
 
+    do_enhance_speech = False
     speech_enhancement_time = None
 
-    if enhance_speech and audio_path is not None:
+    if do_enhance_speech and audio_path is not None:
 
         speech_enhancement_start = time.time()
 
