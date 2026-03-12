@@ -1,6 +1,8 @@
 import logging
 from colorama import Fore, Style, init
 from typing import Union
+import os
+import subprocess  
 
 # Initialize colorama
 init(autoreset=True)
@@ -34,3 +36,29 @@ def setup_logger(name: Union[str, None] = None):
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
     return logger
+
+
+def convert_webm_to_wav(input_path: str) -> str:
+    wav_path = os.path.splitext(input_path)[0] + ".wav"
+
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-i",
+            input_path,
+            "-vn",
+            "-acodec",
+            "pcm_s16le",
+            "-ar",
+            "16000",
+            "-ac",
+            "1",
+            wav_path,
+        ],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=True,
+    )
+
+    return wav_path

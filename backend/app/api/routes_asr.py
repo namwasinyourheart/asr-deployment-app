@@ -15,18 +15,94 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException, WebSocket,
 from app.core.config import settings
 from app.services.inference import asr_infer as asr_infer
 from app.services.postprocess_text import postprocess_text, cpr
+from app.services.service_utils import convert_webm_to_wav
 
 from app.schemas.asr import ASRResponse, ASRRequest
 import tempfile
 import aiofiles
 import os
+import subprocess
 
 
 
 router = APIRouter(tags=["asr"])
 logger = logging.getLogger(__name__)
 
-ALLOWED_EXTENSIONS = (".wav", ".mp3", ".flac", ".m4a")
+ALLOWED_EXTENSIONS = (
+    ".wav",
+    ".mp3",
+    ".flac",
+    ".m4a",
+    ".webm",
+    ".ogg",
+    ".opus",
+)
+
+
+
+# @router.post("/file", response_model=ASRResponse)
+# async def transcribe_audio_file(
+#     audio_file: UploadFile = File(...),
+#     enhance_speech: bool = Form(True),
+#     postprocess_text: bool = Form(True),
+# ):
+#     # Validate file type
+#     if not audio_file.filename.lower().endswith(ALLOWED_EXTENSIONS):
+#         raise HTTPException(status_code=400, detail=f"Unsupported file type. Allowed: {ALLOWED_EXTENSIONS}")
+
+#     # Tạo ASRRequest object thủ công — không đụng schema
+#     options = ASRRequest(
+#         enhance_speech=enhance_speech,
+#         postprocess_text=postprocess_text,
+#     )
+
+#     # Tạo file tạm
+#     suffix = os.path.splitext(audio_file.filename)[1]
+#     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+#         tmp_path = tmp.name
+
+#     if tmp_path.lower().endswith(".webm"):
+#         tmp_path = convert_webm_to_wav(tmp_path)
+
+#     # audio_path = tmp_path
+
+#     # if tmp_path.lower().endswith(".webm"):
+#     #     audio_path = convert_webm_to_wav(tmp_path)
+
+    
+
+#     try:
+#         # Ghi file upload vào temp file
+#         async with aiofiles.open(tmp_path, "wb") as out_file:
+#             while chunk := await audio_file.read(1024 * 1024):
+#                 await out_file.write(chunk)
+
+#         logger.info(f"Saved uploaded file to temp path: {tmp_path}, size: {os.path.getsize(tmp_path)} bytes")
+
+#         # Chạy inference
+#         try:
+#             result = asr_infer(
+#                 tmp_path,
+#                 do_enhance_speech=options.enhance_speech,
+#                 do_postprocess_text=options.postprocess_text,
+#                 milliseconds=True,
+#             )
+#         except Exception as e:
+#             logger.error(f"ASR inference failed: {e}")
+#             raise HTTPException(status_code=500, detail=f"ASR inference failed: {str(e)}")
+
+#         return result
+
+#     finally:
+#         if os.path.exists(tmp_path):
+#             try:
+#                 os.remove(tmp_path)
+#                 logger.info(f"Deleted temp file: {tmp_path}")
+#             except Exception as e:
+#                 logger.warning(f"Failed to delete temp file {tmp_path}: {e}")
+
+
+
 
 @router.post("/file", response_model=ASRResponse)
 async def transcribe_audio_file(
@@ -49,6 +125,8 @@ async def transcribe_audio_file(
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp_path = tmp.name
 
+    wav_path = None
+
     try:
         # Ghi file upload vào temp file
         async with aiofiles.open(tmp_path, "wb") as out_file:
@@ -57,10 +135,16 @@ async def transcribe_audio_file(
 
         logger.info(f"Saved uploaded file to temp path: {tmp_path}, size: {os.path.getsize(tmp_path)} bytes")
 
+        # Convert nếu là webm
+        audio_path = tmp_path
+        if tmp_path.lower().endswith(".webm"):
+            wav_path = convert_webm_to_wav(tmp_path)
+            audio_path = wav_path
+
         # Chạy inference
         try:
             result = asr_infer(
-                tmp_path,
+                audio_path,
                 do_enhance_speech=options.enhance_speech,
                 do_postprocess_text=options.postprocess_text,
                 milliseconds=True,
@@ -78,6 +162,15 @@ async def transcribe_audio_file(
                 logger.info(f"Deleted temp file: {tmp_path}")
             except Exception as e:
                 logger.warning(f"Failed to delete temp file {tmp_path}: {e}")
+
+        if wav_path and os.path.exists(wav_path):
+            try:
+                os.remove(wav_path)
+                logger.info(f"Deleted temp file: {wav_path}")
+            except Exception as e:
+                logger.warning(f"Failed to delete temp file {wav_path}: {e}")
+
+
 
 @router.post("/transcript", response_model=ASRResponse)
 async def transcribe_audio_with_model(
