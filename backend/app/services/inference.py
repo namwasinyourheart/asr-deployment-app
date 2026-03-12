@@ -50,6 +50,8 @@ def _load_faster_whisper_model(model_name: Optional[str] = None):
     # Return cached model if available
     if cache_key in _models_cache:
         return _models_cache[cache_key]
+
+    model_name = None
         
     try:
         if model_name is None:
